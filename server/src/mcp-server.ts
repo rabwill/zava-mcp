@@ -346,9 +346,34 @@ export function createMcpServer(): Server {
           const n = (args.policyHolderName as string).toLowerCase();
           claims = claims.filter(c => c.policyHolderName.toLowerCase().includes(n));
         }
+
+        // Enrich: fetch all related data so the widget can do client-side master-detail
+        const allInspections = (await db.getAllInspections()).map(parseInspection);
+        const allPurchaseOrders = (await db.getAllPurchaseOrders()).map(parsePurchaseOrder);
+
+        const contractorIds = [...new Set(allPurchaseOrders.map(po => po.contractorId))];
+        const allContractors: Record<string, any> = {};
+        for (const cid of contractorIds) {
+          const c = await db.getContractorById(cid);
+          if (c) allContractors[cid] = parseContractor(c);
+        }
+
+        const inspectorIds = [...new Set(allInspections.map(i => i.inspectorId))];
+        const allInspectors: Record<string, any> = {};
+        for (const iid of inspectorIds) {
+          const i = await db.getInspectorById(iid);
+          if (i) allInspectors[iid] = parseInspector(i);
+        }
+
         return {
           content: [{ type: "text" as const, text: `Loaded ${claims.length} claims.` }],
-          structuredContent: { claims },
+          structuredContent: {
+            claims,
+            inspections: allInspections,
+            purchaseOrders: allPurchaseOrders,
+            contractors: allContractors,
+            inspectors: allInspectors,
+          },
           _meta: invocationMeta(CLAIMS_DASHBOARD),
         };
       }

@@ -97,6 +97,10 @@ export interface PurchaseOrder {
 // ── Widget data payloads ───────────────────────────────────────────────
 export interface ClaimsDashboardData {
   claims: Claim[];
+  inspections: Inspection[];
+  purchaseOrders: PurchaseOrder[];
+  contractors: Record<string, Contractor>;
+  inspectors: Record<string, Inspector>;
 }
 
 export interface ClaimDetailData {

@@ -22,6 +22,7 @@ import {
 import {
   ArrowMaximizeRegular,
   ArrowMinimizeRegular,
+  ArrowLeftRegular,
   PersonRegular,
   LocationRegular,
   CalendarRegular,
@@ -166,6 +167,12 @@ export function ClaimDetail() {
     setTimeout(() => setToast(null), 4000);
   };
 
+  const handleBack = useCallback(async () => {
+    if (window.openai?.callTool) {
+      await window.openai.callTool("show-claims-dashboard", {});
+    }
+  }, []);
+
   const toggleFullscreen = useCallback(async () => {
     if (window.openai?.requestDisplayMode) {
       const current = window.openai.displayMode;
@@ -272,7 +279,16 @@ export function ClaimDetail() {
 
       {/* Header */}
       <div className={styles.header}>
-        <div>
+        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+          <Button
+            icon={<ArrowLeftRegular />}
+            appearance="subtle"
+            onClick={handleBack}
+            title="Back to Claims"
+            size="small"
+            style={{ flexShrink: 0 }}
+          />
+          <div>
           <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
             <Text size={600} weight="bold">{claim.claimNumber}</Text>
             <Badge appearance="filled" color={statusBadgeColor(claim.status)}>
@@ -282,6 +298,7 @@ export function ClaimDetail() {
           <Text size={200} style={{ color: colors.textSecondary }}>
             {claim.status}
           </Text>
+          </div>
         </div>
         <div style={{ display: "flex", gap: "4px" }}>
           {!editingClaim && (
