@@ -1,124 +1,287 @@
-import React, { useState, useCallback, useMemo } from "react";
+import React, { useState, useCallback, useMemo, useEffect } from "react";
+import useEmblaCarousel from "embla-carousel-react";
 import {
   makeStyles,
   Text,
   Badge,
-  Card,
-  CardHeader,
-  Input,
-  Select,
-  Button,
-  Divider,
   tokens,
 } from "@fluentui/react-components";
 import {
-  SearchRegular,
-  ArrowMaximizeRegular,
-  ArrowMinimizeRegular,
   TaskListLtrRegular,
-  ReceiptMoneyRegular,
-  AlertRegular,
+  ArrowLeftRegular,
+  ArrowRightRegular,
   CheckmarkCircleRegular,
   DismissCircleRegular,
   ClockRegular,
+  AlertRegular,
   DocumentRegular,
+  ReceiptMoneyRegular,
+  ArrowMaximizeRegular,
 } from "@fluentui/react-icons";
 import { useOpenAiGlobal } from "../hooks/useOpenAiGlobal";
 import { useThemeColors } from "../hooks/useThemeColors";
 import type { ClaimsDashboardData, Claim } from "../types";
 
+/* ─── styles ──────────────────────────────────────────────────────────── */
 const useStyles = makeStyles({
-  container: { padding: "16px", fontFamily: tokens.fontFamilyBase },
-  header: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" },
-  filters: { display: "flex", gap: "8px", marginBottom: "16px", flexWrap: "wrap" },
-  metricsRow: { display: "flex", gap: "12px", marginBottom: "16px", flexWrap: "wrap" },
-  metricCard: { flex: "1 1 140px", padding: "12px", borderRadius: "8px", textAlign: "center" as const },
-  grid: { display: "flex", flexDirection: "column" as const, gap: "8px" },
-  claimCard: { padding: "12px", borderRadius: "8px", cursor: "pointer", transition: "box-shadow 0.2s" },
-  cardRow: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" },
-  tags: { display: "flex", gap: "4px", flexWrap: "wrap" as const, marginTop: "4px" },
+  root: {
+    fontFamily: tokens.fontFamilyBase,
+    position: "relative",
+    width: "100%",
+    overflow: "hidden",
+  },
+  header: {
+    display: "flex",
+    alignItems: "center",
+    gap: "12px",
+    padding: "20px 20px 0",
+  },
+  headerIcon: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    width: "44px",
+    height: "44px",
+    borderRadius: "14px",
+    flexShrink: 0,
+  },
+  metricsStrip: {
+    display: "flex",
+    gap: "16px",
+    padding: "16px 20px 4px",
+    flexWrap: "wrap" as const,
+  },
+  metric: {
+    display: "flex",
+    alignItems: "center",
+    gap: "6px",
+  },
+  viewport: {
+    overflow: "hidden",
+    padding: "16px 0",
+  },
+  slideContainer: {
+    display: "flex",
+    gap: "16px",
+    paddingLeft: "20px",
+    paddingRight: "20px",
+  },
+  card: {
+    minWidth: "280px",
+    maxWidth: "280px",
+    width: "70vw",
+    display: "flex",
+    flexDirection: "column" as const,
+    borderRadius: "16px",
+    overflow: "hidden",
+    cursor: "pointer",
+    transition: "transform 0.15s, box-shadow 0.15s",
+    flexShrink: 0,
+    ":hover": {
+      transform: "translateY(-2px)",
+    },
+  },
+  cardTop: {
+    padding: "16px 16px 12px",
+    display: "flex",
+    flexDirection: "column" as const,
+    gap: "8px",
+    flex: 1,
+  },
+  cardTopRow: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  damageRow: {
+    display: "flex",
+    gap: "4px",
+    flexWrap: "wrap" as const,
+    marginTop: "4px",
+  },
+  cardBottom: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: "10px 16px",
+    borderTop: "1px solid",
+  },
+  navBtn: {
+    position: "absolute" as const,
+    top: "50%",
+    transform: "translateY(-50%)",
+    zIndex: 10,
+    width: "36px",
+    height: "36px",
+    borderRadius: "50%",
+    border: "none",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    cursor: "pointer",
+    transition: "background 0.15s",
+  },
+  edgeFade: {
+    position: "absolute" as const,
+    top: 0,
+    bottom: 0,
+    width: "12px",
+    pointerEvents: "none" as const,
+    zIndex: 5,
+    transition: "opacity 0.2s",
+  },
 });
 
-function getStatusColor(status: string): "success" | "warning" | "danger" | "informative" | "important" {
-  const lower = status.toLowerCase();
-  if (lower.includes("approved")) return "success";
-  if (lower.includes("pending")) return "warning";
-  if (lower.includes("denied") || lower.includes("rejected")) return "danger";
-  if (lower.includes("closed")) return "informative";
+/* ─── status helpers ──────────────────────────────────────────────────── */
+function statusColor(s: string): "success" | "warning" | "danger" | "informative" | "important" {
+  const l = s.toLowerCase();
+  if (l.includes("approved")) return "success";
+  if (l.includes("pending")) return "warning";
+  if (l.includes("denied") || l.includes("rejected")) return "danger";
+  if (l.includes("closed")) return "informative";
   return "important";
 }
 
-function getStatusIcon(status: string) {
-  const lower = status.toLowerCase();
-  if (lower.includes("approved")) return <CheckmarkCircleRegular />;
-  if (lower.includes("pending")) return <ClockRegular />;
-  if (lower.includes("denied")) return <DismissCircleRegular />;
-  if (lower.includes("closed")) return <DocumentRegular />;
+function statusIcon(s: string) {
+  const l = s.toLowerCase();
+  if (l.includes("approved")) return <CheckmarkCircleRegular />;
+  if (l.includes("pending")) return <ClockRegular />;
+  if (l.includes("denied")) return <DismissCircleRegular />;
+  if (l.includes("closed")) return <DocumentRegular />;
   return <AlertRegular />;
 }
 
+/* ─── claim card ──────────────────────────────────────────────────────── */
+function ClaimCard({
+  claim,
+  colors,
+  styles,
+  onClick,
+}: {
+  claim: Claim;
+  colors: ReturnType<typeof useThemeColors>;
+  styles: ReturnType<typeof useStyles>;
+  onClick: () => void;
+}) {
+  return (
+    <div
+      className={styles.card}
+      style={{
+        backgroundColor: colors.surface,
+        boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
+      }}
+      onClick={onClick}
+    >
+      <div className={styles.cardTop}>
+        <div className={styles.cardTopRow}>
+          <Text weight="semibold" size={400}>
+            {claim.claimNumber}
+          </Text>
+          <Badge
+            appearance="filled"
+            color={statusColor(claim.status)}
+            icon={statusIcon(claim.status)}
+            size="small"
+          >
+            {claim.status.split(" - ")[0]}
+          </Badge>
+        </div>
+
+        <div>
+          <Text size={300} weight="semibold" style={{ display: "block" }}>
+            {claim.policyHolderName}
+          </Text>
+          <Text size={200} style={{ color: colors.textSecondary }}>
+            {claim.property}
+          </Text>
+        </div>
+
+        <Text size={200} style={{ color: colors.textSecondary }}>
+          {claim.description.length > 100
+            ? claim.description.slice(0, 100) + "…"
+            : claim.description}
+        </Text>
+
+        <div className={styles.damageRow}>
+          {claim.damageTypes.map((dt, i) => (
+            <Badge key={i} appearance="outline" size="small">
+              {dt}
+            </Badge>
+          ))}
+        </div>
+      </div>
+
+      <div className={styles.cardBottom} style={{ borderColor: colors.border }}>
+        <Text size={200} style={{ color: colors.textSecondary }}>
+          {new Date(claim.dateOfLoss).toLocaleDateString()}
+        </Text>
+        <Text weight="semibold" style={{ color: colors.primary }}>
+          ${claim.estimatedLoss.toLocaleString()}
+        </Text>
+      </div>
+    </div>
+  );
+}
+
+/* ─── sample data ─────────────────────────────────────────────────────── */
 const SAMPLE_CLAIMS: Claim[] = [
   {
-    id: "1", claimNumber: "CN202504990", policyNumber: "POL-HO-2025-001",
-    policyHolderName: "Sample User", policyHolderEmail: "sample@email.com",
-    property: "123 Main St", dateOfLoss: "2025-01-01", dateReported: "2025-01-02",
-    status: "Open - Under Investigation", damageTypes: ["Fire damage"],
-    description: "Sample claim", estimatedLoss: 25000, adjusterAssigned: "adj-001",
-    notes: [], createdAt: "2025-01-02", updatedAt: "2025-01-03",
+    id: "1",
+    claimNumber: "CN202504990",
+    policyNumber: "POL-HO-2025-001",
+    policyHolderName: "Sample User",
+    policyHolderEmail: "sample@email.com",
+    property: "123 Main St",
+    dateOfLoss: "2025-01-01",
+    dateReported: "2025-01-02",
+    status: "Open - Under Investigation",
+    damageTypes: ["Fire damage"],
+    description: "Sample claim",
+    estimatedLoss: 25000,
+    adjusterAssigned: "adj-001",
+    notes: [],
+    createdAt: "2025-01-02",
+    updatedAt: "2025-01-03",
   },
 ];
 
+/* ─── main component ──────────────────────────────────────────────────── */
 export function ClaimsDashboard() {
   const styles = useStyles();
   const colors = useThemeColors();
   const toolOutput = useOpenAiGlobal("toolOutput") as ClaimsDashboardData | null;
   const claims = toolOutput?.claims ?? SAMPLE_CLAIMS;
 
-  const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
+  // Embla carousel setup — same pattern as the official pizzaz-carousel
+  const [emblaRef, emblaApi] = useEmblaCarousel({
+    align: "start",
+    loop: false,
+    containScroll: "trimSnaps",
+    slidesToScroll: "auto",
+    dragFree: true,
+  });
+  const [canPrev, setCanPrev] = useState(false);
+  const [canNext, setCanNext] = useState(false);
 
-  const [isFullscreen, setIsFullscreen] = useState(false);
-  const toggleFullscreen = useCallback(async () => {
-    if (window.openai?.requestDisplayMode) {
-      const current = window.openai.displayMode;
-      await window.openai.requestDisplayMode({ mode: current === "fullscreen" ? "inline" : "fullscreen" });
-      return;
-    }
-    try {
-      if (!document.fullscreenElement) await document.documentElement.requestFullscreen();
-      else await document.exitFullscreen();
-    } catch {}
-    setIsFullscreen(prev => !prev);
-  }, []);
+  useEffect(() => {
+    if (!emblaApi) return;
+    const update = () => {
+      setCanPrev(emblaApi.canScrollPrev());
+      setCanNext(emblaApi.canScrollNext());
+    };
+    update();
+    emblaApi.on("select", update);
+    emblaApi.on("reInit", update);
+    return () => {
+      emblaApi.off("select", update);
+      emblaApi.off("reInit", update);
+    };
+  }, [emblaApi]);
 
-  const statuses = useMemo(() => {
-    const set = new Set(claims.map(c => {
-      const s = c.status.toLowerCase();
-      if (s.includes("approved")) return "Approved";
-      if (s.includes("pending")) return "Pending";
-      if (s.includes("denied")) return "Denied";
-      if (s.includes("closed")) return "Closed";
-      if (s.includes("open")) return "Open";
-      return "Other";
-    }));
-    return Array.from(set).sort();
-  }, [claims]);
-
-  const filtered = useMemo(() => {
-    return claims.filter(c => {
-      const matchesSearch = !search ||
-        c.claimNumber.toLowerCase().includes(search.toLowerCase()) ||
-        c.policyHolderName.toLowerCase().includes(search.toLowerCase()) ||
-        c.property.toLowerCase().includes(search.toLowerCase());
-      const matchesStatus = statusFilter === "all" ||
-        c.status.toLowerCase().includes(statusFilter.toLowerCase());
-      return matchesSearch && matchesStatus;
-    });
-  }, [claims, search, statusFilter]);
-
+  // Metrics summary
   const metrics = useMemo(() => {
     const total = claims.length;
-    const totalLoss = claims.reduce((sum, c) => sum + c.estimatedLoss, 0);
+    const totalLoss = claims.reduce((s, c) => s + c.estimatedLoss, 0);
     const open = claims.filter(c => c.status.toLowerCase().includes("open")).length;
     const approved = claims.filter(c => c.status.toLowerCase().includes("approved")).length;
     const pending = claims.filter(c => c.status.toLowerCase().includes("pending")).length;
@@ -131,108 +294,152 @@ export function ClaimsDashboard() {
     }
   }, []);
 
+  const handleFullscreen = useCallback(async () => {
+    if (window.openai?.requestDisplayMode) {
+      await window.openai.requestDisplayMode({ mode: "fullscreen" });
+    }
+  }, []);
+
   return (
-    <div className={styles.container} style={{ backgroundColor: colors.background, color: colors.text }}>
-      {/* Header */}
+    <div
+      className={styles.root}
+      style={{ backgroundColor: colors.background, color: colors.text }}
+    >
+      {/* ── Header ─────────────────────────────────────────────────── */}
       <div className={styles.header}>
-        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-          <TaskListLtrRegular style={{ fontSize: "24px", color: colors.primary }} />
-          <Text size={600} weight="bold">Zava Insurance — Claims Dashboard</Text>
+        <div
+          className={styles.headerIcon}
+          style={{ backgroundColor: `${colors.primary}20`, color: colors.primary }}
+        >
+          <TaskListLtrRegular style={{ fontSize: "22px" }} />
         </div>
-        <Button
-          icon={isFullscreen ? <ArrowMinimizeRegular /> : <ArrowMaximizeRegular />}
-          appearance="subtle"
-          onClick={toggleFullscreen}
-          title={isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
-        />
+        <div style={{ minWidth: 0, flex: 1 }}>
+          <Text size={500} weight="bold" style={{ display: "block" }}>
+            Zava Insurance — Claims
+          </Text>
+          <Text size={200} style={{ color: colors.textSecondary }}>
+            {claims.length} claims · ${metrics.totalLoss.toLocaleString()} estimated loss
+          </Text>
+        </div>
+        <button
+          onClick={handleFullscreen}
+          title="Fullscreen"
+          style={{
+            background: "none",
+            border: "none",
+            cursor: "pointer",
+            color: colors.textSecondary,
+            padding: "6px",
+          }}
+        >
+          <ArrowMaximizeRegular style={{ fontSize: "18px" }} />
+        </button>
       </div>
 
-      {/* Metrics */}
-      <div className={styles.metricsRow}>
-        <div className={styles.metricCard} style={{ backgroundColor: colors.surface, borderLeft: `4px solid ${colors.primary}` }}>
-          <Text size={400} style={{ color: colors.textSecondary }}>Total Claims</Text>
-          <Text size={700} weight="bold" block>{metrics.total}</Text>
-        </div>
-        <div className={styles.metricCard} style={{ backgroundColor: colors.surface, borderLeft: `4px solid ${colors.success}` }}>
-          <Text size={400} style={{ color: colors.textSecondary }}>Approved</Text>
-          <Text size={700} weight="bold" block style={{ color: colors.success }}>{metrics.approved}</Text>
-        </div>
-        <div className={styles.metricCard} style={{ backgroundColor: colors.surface, borderLeft: `4px solid ${colors.warning}` }}>
-          <Text size={400} style={{ color: colors.textSecondary }}>Pending</Text>
-          <Text size={700} weight="bold" block style={{ color: colors.warning }}>{metrics.pending}</Text>
-        </div>
-        <div className={styles.metricCard} style={{ backgroundColor: colors.surface, borderLeft: `4px solid ${colors.error}` }}>
-          <Text size={400} style={{ color: colors.textSecondary }}>Open</Text>
-          <Text size={700} weight="bold" block style={{ color: colors.error }}>{metrics.open}</Text>
-        </div>
-        <div className={styles.metricCard} style={{ backgroundColor: colors.surface, borderLeft: `4px solid ${colors.info}` }}>
-          <ReceiptMoneyRegular style={{ marginRight: "4px" }} />
-          <Text size={400} style={{ color: colors.textSecondary }}>Total Est. Loss</Text>
-          <Text size={700} weight="bold" block>${metrics.totalLoss.toLocaleString()}</Text>
-        </div>
-      </div>
-
-      <Divider style={{ marginBottom: "12px" }} />
-
-      {/* Filters */}
-      <div className={styles.filters}>
-        <Input
-          placeholder="Search claims..."
-          contentBefore={<SearchRegular />}
-          value={search}
-          onChange={(_, d) => setSearch(d.value)}
-          style={{ flex: "1 1 200px" }}
-        />
-        <Select value={statusFilter} onChange={(_, d) => setStatusFilter(d.value)} style={{ minWidth: "150px" }}>
-          <option value="all">All Statuses</option>
-          {statuses.map(s => <option key={s} value={s.toLowerCase()}>{s}</option>)}
-        </Select>
-      </div>
-
-      <Text size={300} style={{ color: colors.textSecondary, marginBottom: "8px", display: "block" }}>
-        Showing {filtered.length} of {claims.length} claims
-      </Text>
-
-      {/* Claims Grid */}
-      <div className={styles.grid}>
-        {filtered.map(claim => (
-          <Card
-            key={claim.id}
-            className={styles.claimCard}
-            style={{ backgroundColor: colors.surface }}
-            onClick={() => handleClaimClick(claim)}
-          >
-            <CardHeader
-              header={
-                <div style={{ display: "flex", justifyContent: "space-between", width: "100%", alignItems: "center" }}>
-                  <Text weight="semibold">{claim.claimNumber}</Text>
-                  <Badge appearance="filled" color={getStatusColor(claim.status)} icon={getStatusIcon(claim.status)}>
-                    {claim.status.split(" - ")[0]}
-                  </Badge>
-                </div>
-              }
-              description={
-                <Text size={200} style={{ color: colors.textSecondary }}>
-                  {claim.policyHolderName} · {claim.property}
-                </Text>
-              }
+      {/* ── Metric pills ───────────────────────────────────────────── */}
+      <div className={styles.metricsStrip}>
+        {[
+          { label: "Open", value: metrics.open, color: colors.error },
+          { label: "Pending", value: metrics.pending, color: colors.warning },
+          { label: "Approved", value: metrics.approved, color: colors.success },
+        ].map(m => (
+          <div key={m.label} className={styles.metric}>
+            <span
+              style={{
+                width: 8,
+                height: 8,
+                borderRadius: "50%",
+                backgroundColor: m.color,
+                display: "inline-block",
+              }}
             />
-            <div className={styles.cardRow}>
-              <Text size={200} style={{ color: colors.textSecondary }}>
-                Loss Date: {new Date(claim.dateOfLoss).toLocaleDateString()}
-              </Text>
-              <Text weight="semibold" style={{ color: colors.primary }}>
-                ${claim.estimatedLoss.toLocaleString()}
-              </Text>
-            </div>
-            <div className={styles.tags}>
-              {claim.damageTypes.map((dt, i) => (
-                <Badge key={i} appearance="outline" size="small">{dt}</Badge>
-              ))}
-            </div>
-          </Card>
+            <Text size={200} style={{ color: colors.textSecondary }}>
+              {m.value} {m.label}
+            </Text>
+          </div>
         ))}
+        <div className={styles.metric}>
+          <ReceiptMoneyRegular style={{ fontSize: "14px", color: colors.textSecondary }} />
+          <Text size={200} style={{ color: colors.textSecondary }}>
+            ${metrics.totalLoss.toLocaleString()}
+          </Text>
+        </div>
       </div>
+
+      {/* ── Carousel ───────────────────────────────────────────────── */}
+      <div className={styles.viewport} ref={emblaRef}>
+        <div className={styles.slideContainer}>
+          {claims.map(claim => (
+            <ClaimCard
+              key={claim.id}
+              claim={claim}
+              colors={colors}
+              styles={styles}
+              onClick={() => handleClaimClick(claim)}
+            />
+          ))}
+        </div>
+      </div>
+
+      {/* ── Edge gradients ─────────────────────────────────────────── */}
+      <div
+        className={styles.edgeFade}
+        style={{
+          left: 0,
+          opacity: canPrev ? 1 : 0,
+          borderLeft: "1px solid rgba(0,0,0,0.1)",
+          background: "linear-gradient(to right, rgba(0,0,0,0.06), transparent)",
+          WebkitMaskImage:
+            "linear-gradient(to bottom, transparent 0%, white 30%, white 70%, transparent 100%)",
+          maskImage:
+            "linear-gradient(to bottom, transparent 0%, white 30%, white 70%, transparent 100%)",
+        }}
+      />
+      <div
+        className={styles.edgeFade}
+        style={{
+          right: 0,
+          opacity: canNext ? 1 : 0,
+          borderRight: "1px solid rgba(0,0,0,0.1)",
+          background: "linear-gradient(to left, rgba(0,0,0,0.06), transparent)",
+          WebkitMaskImage:
+            "linear-gradient(to bottom, transparent 0%, white 30%, white 70%, transparent 100%)",
+          maskImage:
+            "linear-gradient(to bottom, transparent 0%, white 30%, white 70%, transparent 100%)",
+        }}
+      />
+
+      {/* ── Arrow buttons ──────────────────────────────────────────── */}
+      {canPrev && (
+        <button
+          aria-label="Previous"
+          className={styles.navBtn}
+          style={{
+            left: 8,
+            backgroundColor: colors.surface,
+            boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
+            color: colors.text,
+          }}
+          onClick={() => emblaApi?.scrollPrev()}
+        >
+          <ArrowLeftRegular style={{ fontSize: "18px" }} />
+        </button>
+      )}
+      {canNext && (
+        <button
+          aria-label="Next"
+          className={styles.navBtn}
+          style={{
+            right: 8,
+            backgroundColor: colors.surface,
+            boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
+            color: colors.text,
+          }}
+          onClick={() => emblaApi?.scrollNext()}
+        >
+          <ArrowRightRegular style={{ fontSize: "18px" }} />
+        </button>
+      )}
     </div>
   );
 }
