@@ -41,9 +41,11 @@ import {
   SaveRegular,
   DismissRegular,
   NoteRegular,
+  ShieldCheckmarkRegular,
 } from "@fluentui/react-icons";
 import { useOpenAiGlobal } from "../hooks/useOpenAiGlobal";
 import { useThemeColors } from "../hooks/useThemeColors";
+import { FakeMap } from "./FakeMap";
 import type {
   ClaimsDashboardData,
   Claim,
@@ -55,60 +57,95 @@ import type {
 const useStyles = makeStyles({
   root: { fontFamily: tokens.fontFamilyBase, width: "100%", overflow: "auto" },
 
-  /* Grid view */
-  header: { display: "flex", alignItems: "center", gap: "12px", padding: "20px 20px 0" },
+  /* Grid view — header area */
+  header: {
+    display: "flex", alignItems: "center", gap: "16px",
+    padding: "24px 24px 0",
+  },
   headerIcon: {
     display: "flex", alignItems: "center", justifyContent: "center",
-    width: "44px", height: "44px", borderRadius: "14px", flexShrink: 0,
+    width: "48px", height: "48px", borderRadius: "14px", flexShrink: 0,
   },
+
+  /* Metrics bar */
+  metricsBar: {
+    display: "grid", gridTemplateColumns: "repeat(4, 1fr)",
+    gap: "12px", padding: "16px 24px 0",
+  },
+  metricCard: {
+    display: "flex", flexDirection: "column" as const, gap: "2px",
+    padding: "14px 16px", borderRadius: "12px",
+  },
+
+  /* Toolbar & Filter */
   toolbar: {
     display: "flex", alignItems: "center", justifyContent: "space-between",
-    gap: "12px", padding: "16px 20px 4px", flexWrap: "wrap" as const,
+    gap: "12px", padding: "16px 24px 4px", flexWrap: "wrap" as const,
   },
-  metricsStrip: { display: "flex", gap: "16px", flexWrap: "wrap" as const },
-  metric: { display: "flex", alignItems: "center", gap: "6px" },
   filterRow: { display: "flex", alignItems: "center", gap: "6px" },
   filterChip: {
-    padding: "4px 12px", borderRadius: "16px", border: "1px solid",
-    fontSize: "12px", cursor: "pointer", transition: "background 0.15s",
+    padding: "5px 14px", borderRadius: "20px", border: "1px solid",
+    fontSize: "12px", fontWeight: 500, cursor: "pointer",
+    transition: "all 0.15s ease",
     whiteSpace: "nowrap" as const, fontFamily: tokens.fontFamilyBase,
+    letterSpacing: "0.01em",
   },
+
+  /* Claims grid */
   grid: {
     display: "grid", gridTemplateColumns: "repeat(3, 1fr)",
-    gap: "16px", padding: "16px 20px 20px",
+    gap: "16px", padding: "16px 24px 24px",
   },
   gridCard: {
-    display: "flex", flexDirection: "column" as const, borderRadius: "16px",
-    overflow: "hidden", cursor: "pointer", transition: "transform 0.15s, box-shadow 0.15s",
-    ":hover": { transform: "translateY(-2px)" },
+    display: "flex", flexDirection: "column" as const, borderRadius: "12px",
+    overflow: "hidden", cursor: "pointer",
+    transition: "transform 0.18s ease, box-shadow 0.18s ease",
+    ":hover": { transform: "translateY(-3px)" },
   },
   cardTop: {
     padding: "16px 16px 12px", display: "flex",
     flexDirection: "column" as const, gap: "8px", flex: 1,
   },
   cardTopRow: { display: "flex", justifyContent: "space-between", alignItems: "center" },
-  damageRow: { display: "flex", gap: "4px", flexWrap: "wrap" as const, marginTop: "4px" },
+  damageRow: { display: "flex", gap: "4px", flexWrap: "wrap" as const, marginTop: "2px" },
   cardBottom: {
     display: "flex", justifyContent: "space-between", alignItems: "center",
-    padding: "10px 16px", borderTop: "1px solid",
+    padding: "10px 16px",
   },
 
   /* Detail view */
-  detail: { padding: "16px", fontFamily: tokens.fontFamilyBase },
-  detailHeader: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "16px" },
+  detail: { padding: "20px", fontFamily: tokens.fontFamilyBase },
+  detailHeader: {
+    display: "flex", justifyContent: "space-between", alignItems: "flex-start",
+    marginBottom: "20px",
+  },
   section: { marginBottom: "16px" },
-  infoGrid: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "16px" },
-  infoItem: { display: "flex", alignItems: "center", gap: "8px" },
-  tags: { display: "flex", gap: "4px", flexWrap: "wrap" as const, marginTop: "4px" },
-  poCard: { padding: "12px", borderRadius: "8px", marginBottom: "8px" },
+  sectionHeader: {
+    display: "flex", alignItems: "center", gap: "8px",
+    marginBottom: "10px",
+  },
+  overviewLayout: {
+    display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px",
+  },
+  infoGrid: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" },
+  infoCard: {
+    display: "flex", alignItems: "flex-start", gap: "12px",
+    padding: "14px", borderRadius: "10px",
+  },
+  infoIconWrap: {
+    display: "flex", alignItems: "center", justifyContent: "center",
+    width: "36px", height: "36px", borderRadius: "10px", flexShrink: 0,
+  },
+  tags: { display: "flex", gap: "6px", flexWrap: "wrap" as const, marginTop: "4px" },
+  poCard: { padding: "14px", borderRadius: "10px", marginBottom: "10px" },
   row: { display: "flex", justifyContent: "space-between", alignItems: "center" },
-  lineItemsTable: { width: "100%", borderCollapse: "collapse" as const, marginTop: "8px" },
+  lineItemsTable: { width: "100%", borderCollapse: "collapse" as const, marginTop: "10px" },
   photoGrid: { display: "flex", gap: "8px", flexWrap: "wrap" as const, marginTop: "8px" },
 
-  /* Shared edit */
+  /* Edit areas */
   editBar: {
     display: "flex", gap: "8px", alignItems: "center",
-    padding: "10px 12px", borderRadius: "8px", marginBottom: "12px",
+    padding: "14px 16px", borderRadius: "10px", marginBottom: "16px",
   },
   editField: { marginBottom: "12px" },
   fieldLabel: { display: "block", marginBottom: "4px" },
@@ -143,16 +180,27 @@ function priorityColor(p: string): string {
   }
 }
 
+/** Derive a priority label from claim data (no priority field on Claim type) */
+function derivePriority(claim: Claim): string {
+  if (claim.estimatedLoss >= 50000) return "high";
+  if (claim.estimatedLoss >= 15000) return "medium";
+  return "low";
+}
+
 /* ─── Toast ──────────────────────────────────────────────────────────── */
-function Toast({ message, type, onDismiss }: { message: string; type: "success" | "error"; onDismiss: () => void }) {
-  const c = type === "success"
-    ? { bg: "#dff6dd", fg: "#107c10", bd: "#107c10" }
-    : { bg: "#fde7e9", fg: "#d13438", bd: "#d13438" };
+function Toast({ message, type, onDismiss, colors }: { message: string; type: "success" | "error"; onDismiss: () => void; colors: ReturnType<typeof useThemeColors> }) {
+  const bg = type === "success" ? colors.successSubtle : colors.errorSubtle;
+  const fg = type === "success" ? colors.success : colors.error;
   return (
-    <div style={{ padding: "10px 16px", borderRadius: "8px", marginBottom: "12px", display: "flex", alignItems: "center", gap: "8px", backgroundColor: c.bg, border: `1px solid ${c.bd}`, color: c.fg }}>
+    <div style={{
+      padding: "12px 16px", borderRadius: "10px", marginBottom: "14px",
+      display: "flex", alignItems: "center", gap: "10px",
+      backgroundColor: bg, border: `1px solid ${fg}22`, color: fg,
+      boxShadow: colors.shadowCard,
+    }}>
       {type === "success" ? <CheckmarkCircleRegular /> : <AlertRegular />}
-      <Text size={200} style={{ flex: 1 }}>{message}</Text>
-      <button onClick={onDismiss} style={{ background: "none", border: "none", cursor: "pointer", color: c.fg, padding: "2px" }}>
+      <Text size={200} style={{ flex: 1, color: fg }}>{message}</Text>
+      <button onClick={onDismiss} style={{ background: "none", border: "none", cursor: "pointer", color: fg, padding: "2px" }}>
         <DismissRegular style={{ fontSize: "14px" }} />
       </button>
     </div>
@@ -177,29 +225,47 @@ function ClaimCard({ claim, colors, styles, onClick }: {
   styles: ReturnType<typeof useStyles>;
   onClick: () => void;
 }) {
+  const pColor = priorityColor(derivePriority(claim));
   return (
-    <div className={styles.gridCard} style={{ backgroundColor: colors.surface, boxShadow: "0 2px 8px rgba(0,0,0,0.08)" }} onClick={onClick}>
+    <div className={styles.gridCard} style={{
+      backgroundColor: colors.surface,
+      boxShadow: colors.shadowCard,
+      border: `1px solid ${colors.borderSubtle}`,
+    }} onClick={onClick}>
+      {/* Priority accent bar */}
+      <div style={{ height: "3px", background: pColor, borderRadius: "12px 12px 0 0" }} />
       <div className={styles.cardTop}>
         <div className={styles.cardTopRow}>
-          <Text weight="semibold" size={400}>{claim.claimNumber}</Text>
+          <Text weight="semibold" size={300} style={{ fontFamily: "monospace", color: colors.textSecondary, letterSpacing: "0.02em" }}>
+            {claim.claimNumber}
+          </Text>
           <Badge appearance="filled" color={statusColor(claim.status)} icon={statusIcon(claim.status)} size="small">
             {claim.status.split(" - ")[0]}
           </Badge>
         </div>
         <div>
-          <Text size={300} weight="semibold" style={{ display: "block" }}>{claim.policyHolderName}</Text>
-          <Text size={200} style={{ color: colors.textSecondary }}>{claim.property}</Text>
+          <Text size={300} weight="semibold" style={{ display: "block", marginBottom: "2px" }}>{claim.policyHolderName}</Text>
+          <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+            <LocationRegular style={{ fontSize: "12px", color: colors.textTertiary }} />
+            <Text size={200} style={{ color: colors.textSecondary }}>{claim.property}</Text>
+          </div>
         </div>
-        <Text size={200} style={{ color: colors.textSecondary }}>
-          {claim.description.length > 100 ? claim.description.slice(0, 100) + "…" : claim.description}
+        <Text size={200} style={{ color: colors.textTertiary, lineHeight: "1.4" }}>
+          {claim.description.length > 90 ? claim.description.slice(0, 90) + "…" : claim.description}
         </Text>
         <div className={styles.damageRow}>
-          {claim.damageTypes.map((dt, i) => <Badge key={i} appearance="outline" size="small">{dt}</Badge>)}
+          {claim.damageTypes.slice(0, 3).map((dt, i) => (
+            <Badge key={i} appearance="outline" size="small" style={{ fontSize: "10px" }}>{dt}</Badge>
+          ))}
+          {claim.damageTypes.length > 3 && <Badge appearance="outline" size="small" style={{ fontSize: "10px" }}>+{claim.damageTypes.length - 3}</Badge>}
         </div>
       </div>
-      <div className={styles.cardBottom} style={{ borderColor: colors.border }}>
-        <Text size={200} style={{ color: colors.textSecondary }}>{new Date(claim.dateOfLoss).toLocaleDateString()}</Text>
-        <Text weight="semibold" style={{ color: colors.primary }}>${claim.estimatedLoss.toLocaleString()}</Text>
+      <div className={styles.cardBottom} style={{ borderTop: `1px solid ${colors.borderSubtle}`, backgroundColor: colors.surfaceHover + "44" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+          <CalendarRegular style={{ fontSize: "12px", color: colors.textTertiary }} />
+          <Text size={200} style={{ color: colors.textTertiary }}>{new Date(claim.dateOfLoss).toLocaleDateString()}</Text>
+        </div>
+        <Text weight="bold" size={300} style={{ color: colors.primary }}>${claim.estimatedLoss.toLocaleString()}</Text>
       </div>
     </div>
   );
@@ -380,40 +446,55 @@ export function ClaimsDashboard() {
 
     return (
       <div className={styles.detail} style={{ backgroundColor: colors.background, color: colors.text }}>
-        {toast && <Toast message={toast.message} type={toast.type} onDismiss={() => setToast(null)} />}
+        {toast && <Toast message={toast.message} type={toast.type} onDismiss={() => setToast(null)} colors={colors} />}
 
-        {/* Header */}
+        {/* ── Detail header ────────────────────────────────────────── */}
         <div className={styles.detailHeader}>
-          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-            <Button icon={<ArrowLeftRegular />} appearance="subtle" onClick={goBack} title="Back to Claims" size="small" />
+          <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
+            <Button icon={<ArrowLeftRegular />} appearance="subtle" onClick={goBack} title="Back to Claims" size="small"
+              style={{ borderRadius: "10px", width: "36px", height: "36px" }} />
             <div>
-              <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
-                <Text size={600} weight="bold">{claim.claimNumber}</Text>
-                <Badge appearance="filled" color={statusColor(claim.status)}>{claim.status.split(" - ")[0]}</Badge>
+              <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "4px" }}>
+                <Text size={600} weight="bold" style={{ letterSpacing: "-0.01em" }}>{claim.claimNumber}</Text>
+                <Badge appearance="filled" color={statusColor(claim.status)} icon={statusIcon(claim.status)}>
+                  {claim.status.split(" - ")[0]}
+                </Badge>
+                <Badge appearance="outline" size="small" style={{
+                  backgroundColor: priorityColor(derivePriority(claim)) + "18",
+                  color: priorityColor(derivePriority(claim)),
+                  borderColor: priorityColor(derivePriority(claim)) + "40",
+                }}>{derivePriority(claim)} priority</Badge>
               </div>
-              <Text size={200} style={{ color: colors.textSecondary }}>{claim.status}</Text>
+              <Text size={200} style={{ color: colors.textTertiary }}>{claim.status} &middot; Filed {new Date(claim.dateOfLoss).toLocaleDateString()}</Text>
             </div>
           </div>
-          <div style={{ display: "flex", gap: "4px" }}>
+          <div style={{ display: "flex", gap: "6px" }}>
             {!editingClaim && (
-              <Button icon={<EditRegular />} appearance="subtle" onClick={startEditClaim} title="Edit claim" size="small" />
+              <Button icon={<EditRegular />} appearance="subtle" onClick={startEditClaim} title="Edit claim" size="small"
+                style={{ borderRadius: "10px" }} />
             )}
-            <Button icon={isFullscreen ? <ArrowMinimizeRegular /> : <ArrowMaximizeRegular />} appearance="subtle" onClick={toggleFullscreen} />
+            <Button icon={isFullscreen ? <ArrowMinimizeRegular /> : <ArrowMaximizeRegular />} appearance="subtle" onClick={toggleFullscreen}
+              style={{ borderRadius: "10px" }} />
           </div>
         </div>
 
-        {/* Tabs */}
-        <TabList selectedValue={activeTab} onTabSelect={(_, d) => setActiveTab(d.value as string)} style={{ marginBottom: "16px" }}>
-          <Tab value="overview" icon={<DocumentRegular />}>Overview</Tab>
-          <Tab value="inspections" icon={<SearchRegular />}>Inspections ({inspections.length})</Tab>
-          <Tab value="purchase-orders" icon={<BoxRegular />}>Purchase Orders ({purchaseOrders.length})</Tab>
-        </TabList>
+        {/* ── Tabs ─────────────────────────────────────────────────── */}
+        <div style={{
+          borderBottom: `1px solid ${colors.borderSubtle}`,
+          marginBottom: "20px",
+        }}>
+          <TabList selectedValue={activeTab} onTabSelect={(_, d) => setActiveTab(d.value as string)}>
+            <Tab value="overview" icon={<DocumentRegular />}>Overview</Tab>
+            <Tab value="inspections" icon={<SearchRegular />}>Inspections ({inspections.length})</Tab>
+            <Tab value="purchase-orders" icon={<BoxRegular />}>Purchase Orders ({purchaseOrders.length})</Tab>
+          </TabList>
+        </div>
 
         {/* ── Overview ─────────────────────────────────────────────── */}
         {activeTab === "overview" && (
           <>
             {editingClaim && (
-              <div className={styles.editBar} style={{ backgroundColor: colors.surface, border: `1px solid ${colors.border}` }}>
+              <div className={styles.editBar} style={{ backgroundColor: colors.primarySubtle, border: `1px solid ${colors.primary}30` }}>
                 <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "10px" }}>
                   <div>
                     <Text size={200} weight="semibold" className={styles.fieldLabel}>Status</Text>
@@ -426,77 +507,149 @@ export function ClaimsDashboard() {
                     <Textarea value={claimNote} onChange={(_, d) => setClaimNote(d.value)} placeholder="Add a note…" resize="vertical" style={{ width: "100%" }} />
                   </div>
                   <div className={styles.saveRow}>
-                    <Button appearance="primary" icon={<SaveRegular />} onClick={handleSaveClaim} disabled={savingClaim} size="small">
+                    <Button appearance="primary" icon={<SaveRegular />} onClick={handleSaveClaim} disabled={savingClaim} size="small"
+                      style={{ borderRadius: "8px" }}>
                       {savingClaim ? "Saving…" : "Save Changes"}
                     </Button>
-                    <Button appearance="subtle" icon={<DismissRegular />} onClick={() => setEditingClaim(false)} size="small">Cancel</Button>
+                    <Button appearance="subtle" icon={<DismissRegular />} onClick={() => setEditingClaim(false)} size="small"
+                      style={{ borderRadius: "8px" }}>Cancel</Button>
                   </div>
                 </div>
               </div>
             )}
 
-            <div className={styles.infoGrid}>
-              <div className={styles.infoItem}>
-                <PersonRegular style={{ color: colors.primary }} />
-                <div>
-                  <Text size={200} style={{ color: colors.textSecondary }} block>Policy Holder</Text>
-                  <Text weight="semibold">{claim.policyHolderName}</Text>
-                  <Text size={200} block style={{ color: colors.textSecondary }}>{claim.policyHolderEmail}</Text>
+            <div className={styles.overviewLayout}>
+              {/* LEFT COLUMN — info cards */}
+              <div>
+                <div className={styles.infoGrid}>
+                  <div className={styles.infoCard} style={{ backgroundColor: colors.surface, border: `1px solid ${colors.borderSubtle}`, borderRadius: "12px" }}>
+                    <div className={styles.infoIconWrap} style={{ backgroundColor: colors.primarySubtle }}>
+                      <PersonRegular style={{ color: colors.primary, fontSize: "18px" }} />
+                    </div>
+                    <div style={{ minWidth: 0 }}>
+                      <Text size={200} style={{ color: colors.textTertiary }} block>Policy Holder</Text>
+                      <Text weight="semibold" size={300}>{claim.policyHolderName}</Text>
+                      <Text size={200} block style={{ color: colors.textSecondary }}>{claim.policyHolderEmail}</Text>
+                    </div>
+                  </div>
+                  <div className={styles.infoCard} style={{ backgroundColor: colors.surface, border: `1px solid ${colors.borderSubtle}`, borderRadius: "12px" }}>
+                    <div className={styles.infoIconWrap} style={{ backgroundColor: colors.primarySubtle }}>
+                      <LocationRegular style={{ color: colors.primary, fontSize: "18px" }} />
+                    </div>
+                    <div style={{ minWidth: 0 }}>
+                      <Text size={200} style={{ color: colors.textTertiary }} block>Property</Text>
+                      <Text weight="semibold" size={300}>{claim.property}</Text>
+                    </div>
+                  </div>
+                  <div className={styles.infoCard} style={{ backgroundColor: colors.surface, border: `1px solid ${colors.borderSubtle}`, borderRadius: "12px" }}>
+                    <div className={styles.infoIconWrap} style={{ backgroundColor: colors.warningSubtle }}>
+                      <CalendarRegular style={{ color: colors.warning, fontSize: "18px" }} />
+                    </div>
+                    <div style={{ minWidth: 0 }}>
+                      <Text size={200} style={{ color: colors.textTertiary }} block>Date of Loss</Text>
+                      <Text weight="semibold" size={300}>{new Date(claim.dateOfLoss).toLocaleDateString()}</Text>
+                    </div>
+                  </div>
+                  <div className={styles.infoCard} style={{ backgroundColor: colors.surface, border: `1px solid ${colors.borderSubtle}`, borderRadius: "12px" }}>
+                    <div className={styles.infoIconWrap} style={{ backgroundColor: colors.errorSubtle }}>
+                      <ReceiptMoneyRegular style={{ color: colors.error, fontSize: "18px" }} />
+                    </div>
+                    <div style={{ minWidth: 0 }}>
+                      <Text size={200} style={{ color: colors.textTertiary }} block>Estimated Loss</Text>
+                      <Text weight="bold" size={400} style={{ color: colors.error }}>${claim.estimatedLoss.toLocaleString()}</Text>
+                    </div>
+                  </div>
                 </div>
-              </div>
-              <div className={styles.infoItem}>
-                <LocationRegular style={{ color: colors.primary }} />
-                <div>
-                  <Text size={200} style={{ color: colors.textSecondary }} block>Property</Text>
-                  <Text weight="semibold">{claim.property}</Text>
+
+                {/* Description */}
+                <div className={styles.section} style={{ marginTop: "16px" }}>
+                  <div className={styles.sectionHeader}>
+                    <Text weight="semibold" size={300}>Description</Text>
+                  </div>
+                  <div style={{ padding: "12px 14px", backgroundColor: colors.surface, borderRadius: "10px", border: `1px solid ${colors.borderSubtle}` }}>
+                    <Text size={200} style={{ lineHeight: "1.6", color: colors.textSecondary }}>{claim.description}</Text>
+                  </div>
                 </div>
-              </div>
-              <div className={styles.infoItem}>
-                <CalendarRegular style={{ color: colors.primary }} />
-                <div>
-                  <Text size={200} style={{ color: colors.textSecondary }} block>Date of Loss</Text>
-                  <Text weight="semibold">{new Date(claim.dateOfLoss).toLocaleDateString()}</Text>
+
+                {/* Damage Types & Policy */}
+                <div style={{ display: "flex", gap: "16px", marginTop: "4px" }}>
+                  <div style={{ flex: 1 }}>
+                    <div className={styles.sectionHeader}>
+                      <Text weight="semibold" size={300}>Damage Types</Text>
+                    </div>
+                    <div className={styles.tags}>
+                      {claim.damageTypes.map((dt, i) => (
+                        <Badge key={i} appearance="filled" size="medium" style={{
+                          backgroundColor: colors.errorSubtle, color: colors.error,
+                          border: `1px solid ${colors.error}30`, fontWeight: 500,
+                        }}>{dt}</Badge>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <div className={styles.sectionHeader}>
+                      <ShieldCheckmarkRegular style={{ color: colors.primary, fontSize: "16px" }} />
+                      <Text weight="semibold" size={300}>Policy</Text>
+                    </div>
+                    <Text size={200} style={{ fontFamily: "monospace", color: colors.textSecondary }}>{claim.policyNumber}</Text>
+                  </div>
                 </div>
+
+                {/* Notes */}
+                {claim.notes.length > 0 && (
+                  <div className={styles.section} style={{ marginTop: "16px" }}>
+                    <div className={styles.sectionHeader}>
+                      <NoteRegular style={{ color: colors.primary, fontSize: "16px" }} />
+                      <Text weight="semibold" size={300}>Notes ({claim.notes.length})</Text>
+                    </div>
+                    <div style={{ padding: "12px 14px", backgroundColor: colors.surface, borderRadius: "10px", border: `1px solid ${colors.borderSubtle}` }}>
+                      {claim.notes.map((n, i) => (
+                        <Text key={i} size={200} block style={{ color: colors.textSecondary, paddingLeft: "4px", marginBottom: "4px", lineHeight: "1.5" }}>
+                          &bull; {n}
+                        </Text>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
-              <div className={styles.infoItem}>
-                <ReceiptMoneyRegular style={{ color: colors.primary }} />
-                <div>
-                  <Text size={200} style={{ color: colors.textSecondary }} block>Estimated Loss</Text>
-                  <Text weight="semibold" style={{ color: colors.error }}>${claim.estimatedLoss.toLocaleString()}</Text>
+
+              {/* RIGHT COLUMN — Map */}
+              <div>
+                <div className={styles.sectionHeader}>
+                  <LocationRegular style={{ color: colors.primary, fontSize: "16px" }} />
+                  <Text weight="semibold" size={300}>Property Location</Text>
+                </div>
+                <FakeMap address={claim.property} colors={colors} style={{ height: "280px" }} />
+
+                {/* Quick stats under map */}
+                <div style={{
+                  display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "8px",
+                  marginTop: "12px",
+                }}>
+                  <div style={{
+                    textAlign: "center", padding: "10px 8px", borderRadius: "10px",
+                    backgroundColor: colors.primarySubtle, border: `1px solid ${colors.primary}20`,
+                  }}>
+                    <Text size={400} weight="bold" block style={{ color: colors.primary }}>{inspections.length}</Text>
+                    <Text size={100} style={{ color: colors.textTertiary }}>Inspections</Text>
+                  </div>
+                  <div style={{
+                    textAlign: "center", padding: "10px 8px", borderRadius: "10px",
+                    backgroundColor: colors.warningSubtle, border: `1px solid ${colors.warning}20`,
+                  }}>
+                    <Text size={400} weight="bold" block style={{ color: colors.warning }}>{purchaseOrders.length}</Text>
+                    <Text size={100} style={{ color: colors.textTertiary }}>Purchase Orders</Text>
+                  </div>
+                  <div style={{
+                    textAlign: "center", padding: "10px 8px", borderRadius: "10px",
+                    backgroundColor: colors.successSubtle, border: `1px solid ${colors.success}20`,
+                  }}>
+                    <Text size={400} weight="bold" block style={{ color: colors.success }}>{claim.damageTypes.length}</Text>
+                    <Text size={100} style={{ color: colors.textTertiary }}>Damage Types</Text>
+                  </div>
                 </div>
               </div>
             </div>
-
-            <Divider />
-
-            <div className={styles.section} style={{ marginTop: "12px" }}>
-              <Text weight="semibold" block style={{ marginBottom: "4px" }}>Description</Text>
-              <Text>{claim.description}</Text>
-            </div>
-
-            <div className={styles.section}>
-              <Text weight="semibold" block style={{ marginBottom: "4px" }}>Damage Types</Text>
-              <div className={styles.tags}>
-                {claim.damageTypes.map((dt, i) => <Badge key={i} appearance="outline" color="danger">{dt}</Badge>)}
-              </div>
-            </div>
-
-            <div className={styles.section}>
-              <Text weight="semibold" block style={{ marginBottom: "4px" }}>Policy Number</Text>
-              <Text>{claim.policyNumber}</Text>
-            </div>
-
-            {claim.notes.length > 0 && (
-              <div className={styles.section}>
-                <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "4px" }}>
-                  <NoteRegular style={{ color: colors.primary }} />
-                  <Text weight="semibold">Notes ({claim.notes.length})</Text>
-                </div>
-                {claim.notes.map((n, i) => (
-                  <Text key={i} size={200} block style={{ color: colors.textSecondary, paddingLeft: "4px", marginBottom: "2px" }}>• {n}</Text>
-                ))}
-              </div>
-            )}
           </>
         )}
 
@@ -708,47 +861,81 @@ export function ClaimsDashboard() {
     <div className={styles.root} style={{ backgroundColor: colors.background, color: colors.text }}>
       {/* Header */}
       <div className={styles.header}>
-        <div className={styles.headerIcon} style={{ backgroundColor: `${colors.primary}20`, color: colors.primary }}>
-          <TaskListLtrRegular style={{ fontSize: "22px" }} />
+        <div className={styles.headerIcon} style={{
+          backgroundColor: colors.primarySubtle,
+          color: colors.primary,
+          boxShadow: `0 0 0 4px ${colors.primary}12`,
+        }}>
+          <TaskListLtrRegular style={{ fontSize: "24px" }} />
         </div>
         <div style={{ minWidth: 0, flex: 1 }}>
-          <Text size={500} weight="bold" style={{ display: "block" }}>Zava Insurance — Claims</Text>
-          <Text size={200} style={{ color: colors.textSecondary }}>
-            {claims.length} claims · ${metrics.totalLoss.toLocaleString()} estimated loss
+          <Text size={500} weight="bold" style={{ display: "block", letterSpacing: "-0.01em" }}>Claims Dashboard</Text>
+          <Text size={200} style={{ color: colors.textTertiary }}>
+            Zava Insurance &middot; {claims.length} claims &middot; ${metrics.totalLoss.toLocaleString()} total exposure
           </Text>
         </div>
-        <button onClick={toggleFullscreen} title="Fullscreen" style={{ background: "none", border: "none", cursor: "pointer", color: colors.textSecondary, padding: "6px" }}>
-          <ArrowMaximizeRegular style={{ fontSize: "18px" }} />
+        <button onClick={toggleFullscreen} title="Fullscreen" style={{
+          background: "none", border: `1px solid ${colors.borderSubtle}`,
+          cursor: "pointer", color: colors.textSecondary, padding: "8px",
+          borderRadius: "10px", display: "flex", alignItems: "center",
+        }}>
+          <ArrowMaximizeRegular style={{ fontSize: "16px" }} />
         </button>
       </div>
 
-      {/* Toolbar: Metrics + Filter */}
-      <div className={styles.toolbar}>
-        <div className={styles.metricsStrip}>
-          {[
-            { label: "Open", value: metrics.open, color: colors.error },
-            { label: "Pending", value: metrics.pending, color: colors.warning },
-            { label: "Approved", value: metrics.approved, color: colors.success },
-          ].map(m => (
-            <div key={m.label} className={styles.metric}>
-              <span style={{ width: 8, height: 8, borderRadius: "50%", backgroundColor: m.color, display: "inline-block" }} />
-              <Text size={200} style={{ color: colors.textSecondary }}>{m.value} {m.label}</Text>
+      {/* Metrics Bar */}
+      <div className={styles.metricsBar}>
+        {[
+          {
+            label: "Total Claims", value: metrics.total,
+            icon: <TaskListLtrRegular style={{ fontSize: "18px" }} />,
+            color: colors.primary, bg: colors.primarySubtle, border: colors.primary,
+          },
+          {
+            label: "Open", value: metrics.open,
+            icon: <AlertRegular style={{ fontSize: "18px" }} />,
+            color: colors.error, bg: colors.errorSubtle, border: colors.error,
+          },
+          {
+            label: "Pending", value: metrics.pending,
+            icon: <ClockRegular style={{ fontSize: "18px" }} />,
+            color: colors.warning, bg: colors.warningSubtle, border: colors.warning,
+          },
+          {
+            label: "Approved", value: metrics.approved,
+            icon: <CheckmarkCircleRegular style={{ fontSize: "18px" }} />,
+            color: colors.success, bg: colors.successSubtle, border: colors.success,
+          },
+        ].map(m => (
+          <div key={m.label} className={styles.metricCard} style={{
+            backgroundColor: m.bg,
+            border: `1px solid ${m.border}20`,
+            borderLeft: `3px solid ${m.color}`,
+          }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <Text size={200} style={{ color: colors.textTertiary, fontWeight: 500, textTransform: "uppercase" as const, letterSpacing: "0.05em", fontSize: "10px" }}>{m.label}</Text>
+              <span style={{ color: m.color, opacity: 0.6 }}>{m.icon}</span>
             </div>
-          ))}
-          <div className={styles.metric}>
-            <ReceiptMoneyRegular style={{ fontSize: "14px", color: colors.textSecondary }} />
-            <Text size={200} style={{ color: colors.textSecondary }}>${metrics.totalLoss.toLocaleString()}</Text>
+            <Text size={600} weight="bold" style={{ color: m.color }}>{m.value}</Text>
           </div>
-        </div>
+        ))}
+      </div>
+
+      {/* Toolbar — Filter */}
+      <div className={styles.toolbar}>
+        <Text size={300} weight="semibold" style={{ color: colors.textSecondary }}>
+          {filteredClaims.length} {activeFilter === "All" ? "claims" : `"${activeFilter}" claims`}
+        </Text>
         <div className={styles.filterRow}>
-          <FilterRegular style={{ fontSize: "14px", color: colors.textSecondary }} />
+          <FilterRegular style={{ fontSize: "14px", color: colors.textTertiary }} />
           {STATUS_FILTERS.map(f => {
             const isActive = activeFilter === f;
             return (
               <button key={f} className={styles.filterChip} style={{
                 backgroundColor: isActive ? colors.primary : "transparent",
-                color: isActive ? "#fff" : colors.textSecondary,
-                borderColor: isActive ? colors.primary : colors.border,
+                color: isActive ? colors.primaryText : colors.textSecondary,
+                borderColor: isActive ? colors.primary : colors.borderSubtle,
+                boxShadow: isActive ? `0 0 0 2px ${colors.primary}30` : "none",
               }} onClick={() => setActiveFilter(f)}>
                 {f}
               </button>
@@ -759,8 +946,8 @@ export function ClaimsDashboard() {
 
       {/* Grid */}
       {filteredClaims.length === 0 ? (
-        <div style={{ padding: "40px 20px", textAlign: "center" }}>
-          <Text style={{ color: colors.textSecondary }}>No claims match the "{activeFilter}" filter.</Text>
+        <div style={{ padding: "48px 24px", textAlign: "center" }}>
+          <Text size={300} style={{ color: colors.textTertiary }}>No claims match the &ldquo;{activeFilter}&rdquo; filter.</Text>
         </div>
       ) : (
         <div className={styles.grid}>
