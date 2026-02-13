@@ -222,12 +222,12 @@ export function createMcpServer(): Server {
       {
         name: "show-claims-dashboard",
         title: "Show Claims Dashboard",
-        description: "Displays the Zava Insurance claims dashboard showing all claims with status overview, filters, and summary metrics. Optionally filter by status or policy holder name.",
+        description: "Displays the Zava Insurance claims dashboard showing all claims with status overview, filters, and summary metrics. Supports filtering by status and/or policy holder name. When the user mentions a person's name, first name, last name, or partial name, always pass it as the policyHolderName parameter. The name filter is case-insensitive and supports partial matches (e.g. 'kim' will match 'Kimberly King' and 'Kimberly Williams').",
         inputSchema: {
           type: "object" as const,
           properties: {
             status: { type: "string", description: "Filter claims by status keyword (e.g. 'Open', 'Approved', 'Pending', 'Denied', 'Closed')" },
-            policyHolderName: { type: "string", description: "Filter claims by policy holder name" },
+            policyHolderName: { type: "string", description: "Filter claims by policy holder name. Supports partial, case-insensitive matching — pass the first name, last name, or any part of the name (e.g. 'Kimberly', 'king', 'kim'). When the user asks about a specific person's claims, always use this parameter." },
           },
         },
         _meta: descriptorMeta(CLAIMS_DASHBOARD),
