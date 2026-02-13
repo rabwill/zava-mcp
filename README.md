@@ -49,7 +49,7 @@ npm run seed
 npm run build:widgets
 
 # 5. Start the MCP server (port 3001)
-npm run dev
+cd server & npm run dev
 ```
 
 Connect ChatGPT to: `http://localhost:3001/mcp`

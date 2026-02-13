@@ -279,7 +279,7 @@ export function createMcpServer(): Server {
       {
         name: "update-inspection",
         title: "Update Inspection",
-        description: "Updates an inspection record — status, findings, or recommended actions.",
+        description: "Updates an inspection record — status, findings, recommended actions, property, or inspector assignment.",
         inputSchema: {
           type: "object" as const,
           properties: {
@@ -287,6 +287,8 @@ export function createMcpServer(): Server {
             status: { type: "string", description: "New status (e.g. 'completed', 'scheduled', 'in-progress', 'cancelled')" },
             findings: { type: "string", description: "Updated findings text" },
             recommendedActions: { type: "array", items: { type: "string" }, description: "Updated recommended actions" },
+            property: { type: "string", description: "Updated property address" },
+            inspectorId: { type: "string", description: "Inspector ID to assign (e.g. 'inspector-003')" },
           },
           required: ["inspectionId"],
         },
@@ -317,6 +319,26 @@ export function createMcpServer(): Server {
           required: ["claimId"],
         },
         annotations: { readOnlyHint: true },
+      },
+      {
+        name: "create-inspection",
+        title: "Create Inspection",
+        description: "Creates a new inspection record. Only claimNumber is required. ID is auto-generated, status defaults to 'open'. claimId is optional.",
+        inputSchema: {
+          type: "object" as const,
+          properties: {
+            claimNumber: { type: "string", description: "The claim number (e.g. 'CN202504990')" },
+            claimId: { type: "string", description: "Optional claim ID" },
+            taskType: { type: "string", description: "Type of inspection: 'initial', 're-inspection', 'final'. Defaults to 'initial'" },
+            priority: { type: "string", description: "Priority: 'low', 'medium', 'high'. Defaults to 'medium'" },
+            status: { type: "string", description: "Status. Defaults to 'open'" },
+            scheduledDate: { type: "string", description: "Scheduled date (ISO string)" },
+            inspectorId: { type: "string", description: "Inspector ID to assign" },
+            property: { type: "string", description: "Property address" },
+            instructions: { type: "string", description: "Inspection instructions" },
+          },
+          required: ["claimNumber"],
+        },
       },
       {
         name: "list-inspectors",
@@ -468,6 +490,8 @@ export function createMcpServer(): Server {
         }
         if (args.findings) updates.findings = args.findings;
         if (args.recommendedActions) updates.recommendedActions = args.recommendedActions;
+        if (args.property) updates.property = args.property;
+        if (args.inspectorId) updates.inspectorId = args.inspectorId;
         await db.updateInspection(args.inspectionId as string, updates);
         return {
           content: [{ type: "text" as const, text: `✅ Inspection ${args.inspectionId} updated.` }],
@@ -518,6 +542,37 @@ export function createMcpServer(): Server {
           `📝 Description: ${c.description}`,
         ].join("\n");
         return { content: [{ type: "text" as const, text: summary }] };
+      }
+
+      // ── Data: Create Inspection ────────────────────────────────────────
+      case "create-inspection": {
+        const claimNumber = args.claimNumber as string;
+        // Try to resolve claimId and property from the claim if not provided
+        let claimId = (args.claimId as string) || "";
+        let property = (args.property as string) || "";
+        if (!claimId || !property) {
+          const allClaims = await db.getAllClaims();
+          const matchedClaim = allClaims.find(c => c.claimNumber === claimNumber);
+          if (matchedClaim) {
+            if (!claimId) claimId = matchedClaim.rowKey;
+            if (!property) property = matchedClaim.property;
+          }
+        }
+        const newInspection = await db.createInspection({
+          claimNumber,
+          claimId,
+          property,
+          taskType: args.taskType,
+          priority: args.priority,
+          status: args.status,
+          scheduledDate: args.scheduledDate,
+          inspectorId: args.inspectorId,
+          instructions: args.instructions,
+        });
+        const parsed = parseInspection(newInspection);
+        return {
+          content: [{ type: "text" as const, text: `✅ Inspection ${parsed.id} created for claim ${claimNumber}. Status: ${parsed.status}` }],
+        };
       }
 
       // ── Data: List Inspectors ──────────────────────────────────────────

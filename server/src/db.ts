@@ -158,6 +158,39 @@ export const getInspectionsByClaimId = async (claimId: string): Promise<Inspecti
 export const updateInspection = (id: string, updates: Record<string, unknown>) =>
   updateEntity<InspectionEntity>(inspectionsTable, "inspections", id, updates);
 
+export async function createInspection(fields: Record<string, unknown>): Promise<InspectionEntity> {
+  // Auto-generate a unique id
+  const all = await getAllInspections();
+  const maxNum = all.reduce((max, i) => {
+    const m = i.rowKey.match(/^insp-(\d+)$/);
+    return m ? Math.max(max, parseInt(m[1], 10)) : max;
+  }, 0);
+  const newId = `insp-${String(maxNum + 1).padStart(3, "0")}`;
+  const now = new Date().toISOString();
+  const entity: Record<string, unknown> = {
+    partitionKey: "inspections",
+    rowKey: newId,
+    claimId: fields.claimId ?? "",
+    claimNumber: fields.claimNumber ?? "",
+    taskType: fields.taskType ?? "initial",
+    priority: fields.priority ?? "medium",
+    status: fields.status ?? "open",
+    scheduledDate: fields.scheduledDate ?? "",
+    inspectorId: fields.inspectorId ?? "",
+    property: fields.property ?? "",
+    instructions: fields.instructions ?? "",
+    photos: JSON.stringify(fields.photos ?? []),
+    findings: fields.findings ?? "",
+    recommendedActions: JSON.stringify(fields.recommendedActions ?? []),
+    flaggedIssues: JSON.stringify(fields.flaggedIssues ?? []),
+    createdAt: now,
+    updatedAt: now,
+    completedDate: "",
+  };
+  await inspectionsTable.createEntity(entity as any);
+  return (await getById<InspectionEntity>(inspectionsTable, "inspections", newId))!;
+}
+
 // ── Inspectors ─────────────────────────────────────────────────────────
 export const getAllInspectors = () => listAll<InspectorEntity>(inspectorsTable);
 export const getInspectorById = (id: string) => getById<InspectorEntity>(inspectorsTable, "inspectors", id);

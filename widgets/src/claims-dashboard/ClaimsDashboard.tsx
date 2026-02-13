@@ -337,6 +337,7 @@ export function ClaimsDashboard() {
   /* ── View state ────────────────────────────────────────────────────── */
   const [selectedClaimId, setSelectedClaimId] = useState<string | null>(null);
   const [activeFilter, setActiveFilter] = useState<string>("All");
+  const [nameFilter, setNameFilter] = useState<string>("");
 
   /* ── Detail tab & edit state ───────────────────────────────────────── */
   const [activeTab, setActiveTab] = useState("overview");
@@ -363,9 +364,16 @@ export function ClaimsDashboard() {
 
   /* ── Derived data ──────────────────────────────────────────────────── */
   const filteredClaims = useMemo(() => {
-    if (activeFilter === "All") return claims;
-    return claims.filter(c => c.status.toLowerCase().includes(activeFilter.toLowerCase()));
-  }, [claims, activeFilter]);
+    let result = claims;
+    if (activeFilter !== "All") {
+      result = result.filter(c => c.status.toLowerCase().includes(activeFilter.toLowerCase()));
+    }
+    if (nameFilter.trim()) {
+      const q = nameFilter.trim().toLowerCase();
+      result = result.filter(c => c.policyHolderName.toLowerCase().includes(q));
+    }
+    return result;
+  }, [claims, activeFilter, nameFilter]);
 
   const metrics = useMemo(() => ({
     total: claims.length,
@@ -991,9 +999,48 @@ export function ClaimsDashboard() {
 
       {/* Toolbar — Filter */}
       <div className={styles.toolbar}>
-        <Text size={300} weight="semibold" style={{ color: colors.textSecondary }}>
-          {filteredClaims.length} {activeFilter === "All" ? "claims" : `"${activeFilter}" claims`}
-        </Text>
+        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+          <Text size={300} weight="semibold" style={{ color: colors.textSecondary }}>
+            {filteredClaims.length} {activeFilter === "All" ? "claims" : `"${activeFilter}" claims`}
+          </Text>
+          <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
+            <PersonRegular style={{ position: "absolute", left: "10px", fontSize: "14px", color: colors.textTertiary, pointerEvents: "none" }} />
+            <input
+              type="text"
+              placeholder="Filter by policy holder name…"
+              value={nameFilter}
+              onChange={e => setNameFilter(e.target.value)}
+              style={{
+                padding: "6px 10px 6px 30px",
+                borderRadius: "20px",
+                border: `1px solid ${colors.borderSubtle}`,
+                fontSize: "12px",
+                fontFamily: tokens.fontFamilyBase,
+                backgroundColor: colors.surface,
+                color: colors.text,
+                outline: "none",
+                width: "220px",
+                transition: "border-color 0.15s ease",
+              }}
+              onFocus={e => e.currentTarget.style.borderColor = colors.primary}
+              onBlur={e => e.currentTarget.style.borderColor = colors.borderSubtle}
+            />
+            {nameFilter && (
+              <button
+                onClick={() => setNameFilter("")}
+                style={{
+                  position: "absolute", right: "8px",
+                  background: "none", border: "none", cursor: "pointer",
+                  color: colors.textTertiary, padding: "2px", display: "flex",
+                  alignItems: "center",
+                }}
+                title="Clear filter"
+              >
+                <DismissRegular style={{ fontSize: "12px" }} />
+              </button>
+            )}
+          </div>
+        </div>
         <div className={styles.filterRow}>
           <FilterRegular style={{ fontSize: "14px", color: colors.textTertiary }} />
           {STATUS_FILTERS.map(f => {
