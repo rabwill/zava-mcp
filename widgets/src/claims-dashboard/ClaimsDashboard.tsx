@@ -2,7 +2,6 @@ import React, { useState, useCallback, useMemo } from "react";
 import {
   makeStyles,
   Text,
-  Badge,
   Card,
   CardHeader,
   Button,
@@ -162,6 +161,16 @@ function statusColor(s: string): "success" | "warning" | "danger" | "informative
   return "important";
 }
 
+/** Returns { bg, fg } for a status string using theme-aware colors */
+function statusPillColors(s: string, colors: ReturnType<typeof useThemeColors>): { bg: string; fg: string } {
+  const l = s.toLowerCase();
+  if (l.includes("approved") || l.includes("completed")) return { bg: colors.successSubtle, fg: colors.success };
+  if (l.includes("pending") || l.includes("scheduled")) return { bg: colors.warningSubtle, fg: colors.warning };
+  if (l.includes("denied") || l.includes("rejected") || l.includes("cancelled")) return { bg: colors.errorSubtle, fg: colors.error };
+  if (l.includes("closed")) return { bg: colors.infoSubtle, fg: colors.info };
+  return { bg: colors.primarySubtle, fg: colors.primary };
+}
+
 function statusIcon(s: string) {
   const l = s.toLowerCase();
   if (l.includes("approved") || l.includes("completed")) return <CheckmarkCircleRegular />;
@@ -185,6 +194,39 @@ function derivePriority(claim: Claim): string {
   if (claim.estimatedLoss >= 50000) return "high";
   if (claim.estimatedLoss >= 15000) return "medium";
   return "low";
+}
+
+/** Reusable pill capsule that never overflows — replaces Badge for status text */
+function StatusPill({ label, status, icon, size = "small", colors }: {
+  label: string;
+  status: string;
+  icon?: React.ReactNode;
+  size?: "small" | "medium";
+  colors: ReturnType<typeof useThemeColors>;
+}) {
+  const { bg, fg } = statusPillColors(status, colors);
+  const isSmall = size === "small";
+  return (
+    <span style={{
+      display: "inline-flex", alignItems: "center", gap: "4px",
+      padding: isSmall ? "2px 8px" : "3px 10px",
+      borderRadius: "999px",
+      backgroundColor: bg,
+      color: fg,
+      border: `1px solid ${fg}30`,
+      fontSize: isSmall ? "11px" : "12px",
+      fontWeight: 600,
+      lineHeight: "1.3",
+      whiteSpace: "nowrap",
+      overflow: "hidden",
+      textOverflow: "ellipsis",
+      maxWidth: "100%",
+      flexShrink: 0,
+    }}>
+      {icon && <span style={{ display: "inline-flex", fontSize: isSmall ? "12px" : "14px", flexShrink: 0 }}>{icon}</span>}
+      {label}
+    </span>
+  );
 }
 
 /* ─── Toast ──────────────────────────────────────────────────────────── */
@@ -239,9 +281,7 @@ function ClaimCard({ claim, colors, styles, onClick }: {
           <Text weight="semibold" size={300} style={{ fontFamily: "monospace", color: colors.textSecondary, letterSpacing: "0.02em" }}>
             {claim.claimNumber}
           </Text>
-          <Badge appearance="filled" color={statusColor(claim.status)} icon={statusIcon(claim.status)} size="small">
-            {claim.status.split(" - ")[0]}
-          </Badge>
+          <StatusPill label={claim.status.split(" - ")[0]} status={claim.status} icon={statusIcon(claim.status)} size="small" colors={colors} />
         </div>
         <div>
           <Text size={300} weight="semibold" style={{ display: "block", marginBottom: "2px" }}>{claim.policyHolderName}</Text>
@@ -255,9 +295,18 @@ function ClaimCard({ claim, colors, styles, onClick }: {
         </Text>
         <div className={styles.damageRow}>
           {claim.damageTypes.slice(0, 3).map((dt, i) => (
-            <Badge key={i} appearance="outline" size="small" style={{ fontSize: "10px" }}>{dt}</Badge>
+            <span key={i} style={{
+              display: "inline-flex", padding: "1px 7px", borderRadius: "999px",
+              fontSize: "10px", fontWeight: 500, whiteSpace: "nowrap",
+              color: colors.textSecondary, border: `1px solid ${colors.borderSubtle}`,
+              backgroundColor: colors.surfaceHover,
+            }}>{dt}</span>
           ))}
-          {claim.damageTypes.length > 3 && <Badge appearance="outline" size="small" style={{ fontSize: "10px" }}>+{claim.damageTypes.length - 3}</Badge>}
+          {claim.damageTypes.length > 3 && <span style={{
+            display: "inline-flex", padding: "1px 7px", borderRadius: "999px",
+            fontSize: "10px", fontWeight: 500, whiteSpace: "nowrap",
+            color: colors.textTertiary, border: `1px solid ${colors.borderSubtle}`,
+          }}>+{claim.damageTypes.length - 3}</span>}
         </div>
       </div>
       <div className={styles.cardBottom} style={{ borderTop: `1px solid ${colors.borderSubtle}`, backgroundColor: colors.surfaceHover + "44" }}>
@@ -456,14 +505,15 @@ export function ClaimsDashboard() {
             <div>
               <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "4px" }}>
                 <Text size={600} weight="bold" style={{ letterSpacing: "-0.01em" }}>{claim.claimNumber}</Text>
-                <Badge appearance="filled" color={statusColor(claim.status)} icon={statusIcon(claim.status)}>
-                  {claim.status.split(" - ")[0]}
-                </Badge>
-                <Badge appearance="outline" size="small" style={{
+                <StatusPill label={claim.status.split(" - ")[0]} status={claim.status} icon={statusIcon(claim.status)} size="medium" colors={colors} />
+                <span style={{
+                  display: "inline-flex", alignItems: "center",
+                  padding: "2px 8px", borderRadius: "999px", fontSize: "11px", fontWeight: 600,
+                  whiteSpace: "nowrap",
                   backgroundColor: priorityColor(derivePriority(claim)) + "18",
                   color: priorityColor(derivePriority(claim)),
-                  borderColor: priorityColor(derivePriority(claim)) + "40",
-                }}>{derivePriority(claim)} priority</Badge>
+                  border: `1px solid ${priorityColor(derivePriority(claim))}40`,
+                }}>{derivePriority(claim)} priority</span>
               </div>
               <Text size={200} style={{ color: colors.textTertiary }}>{claim.status} &middot; Filed {new Date(claim.dateOfLoss).toLocaleDateString()}</Text>
             </div>
@@ -579,10 +629,12 @@ export function ClaimsDashboard() {
                     </div>
                     <div className={styles.tags}>
                       {claim.damageTypes.map((dt, i) => (
-                        <Badge key={i} appearance="filled" size="medium" style={{
+                        <span key={i} style={{
+                          display: "inline-flex", padding: "3px 10px", borderRadius: "999px",
+                          fontSize: "12px", fontWeight: 500, whiteSpace: "nowrap",
                           backgroundColor: colors.errorSubtle, color: colors.error,
-                          border: `1px solid ${colors.error}30`, fontWeight: 500,
-                        }}>{dt}</Badge>
+                          border: `1px solid ${colors.error}30`,
+                        }}>{dt}</span>
                       ))}
                     </div>
                   </div>
@@ -671,9 +723,20 @@ export function ClaimsDashboard() {
                             ? <CheckmarkCircleRegular style={{ color: colors.success }} />
                             : <ClockRegular style={{ color: colors.warning }} />}
                           <Text weight="semibold">{insp.id}</Text>
-                          <Badge appearance="tint" size="small">{insp.taskType}</Badge>
-                          <Badge appearance="filled" size="small" style={{ backgroundColor: priorityColor(insp.priority), color: "#fff" }}>{insp.priority}</Badge>
-                          <Badge appearance="outline" size="small" color={statusColor(insp.status)}>{insp.status}</Badge>
+                          <span style={{
+                            display: "inline-flex", padding: "2px 8px", borderRadius: "999px",
+                            fontSize: "11px", fontWeight: 500, whiteSpace: "nowrap",
+                            backgroundColor: colors.surfaceHover, color: colors.textSecondary,
+                            border: `1px solid ${colors.borderSubtle}`,
+                          }}>{insp.taskType}</span>
+                          <span style={{
+                            display: "inline-flex", padding: "2px 8px", borderRadius: "999px",
+                            fontSize: "11px", fontWeight: 600, whiteSpace: "nowrap",
+                            backgroundColor: priorityColor(insp.priority) + "18",
+                            color: priorityColor(insp.priority),
+                            border: `1px solid ${priorityColor(insp.priority)}40`,
+                          }}>{insp.priority}</span>
+                          <StatusPill label={insp.status} status={insp.status} size="small" colors={colors} />
                         </div>
                       </AccordionHeader>
                       <AccordionPanel>
@@ -770,7 +833,7 @@ export function ClaimsDashboard() {
                           <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
                             <BoxRegular style={{ color: colors.primary }} />
                             <Text weight="semibold">{po.poNumber}</Text>
-                            <Badge appearance="filled" color={statusColor(po.status)}>{po.status}</Badge>
+                            <StatusPill label={po.status} status={po.status} size="small" colors={colors} />
                           </div>
                           <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                             <Text weight="bold" style={{ color: colors.primary }}>${po.total.toLocaleString()}</Text>
@@ -806,7 +869,12 @@ export function ClaimsDashboard() {
                       <div style={{ marginTop: "8px", display: "flex", alignItems: "center", gap: "8px" }}>
                         <WrenchRegular style={{ color: colors.primary }} />
                         <Text size={200}>Contractor: <strong>{contractor.name}</strong> — {contractor.businessName}</Text>
-                        {contractor.isPreferred && <Badge appearance="tint" size="small" color="success">Preferred</Badge>}
+                        {contractor.isPreferred && <span style={{
+                          display: "inline-flex", padding: "2px 8px", borderRadius: "999px",
+                          fontSize: "11px", fontWeight: 600, whiteSpace: "nowrap",
+                          backgroundColor: colors.successSubtle, color: colors.success,
+                          border: `1px solid ${colors.success}30`,
+                        }}>Preferred</span>}
                       </div>
                     )}
 
